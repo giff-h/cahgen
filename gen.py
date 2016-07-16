@@ -16,14 +16,19 @@ card_stop_side = card_start_side + card_width * 3
 card_stop_bottom = card_start_top + card_height * 3
 
 text_offset_x = 11.0
-text_offset_y = 12.0
+text_offset_y = 11.0
 
-style = deepcopy(getSampleStyleSheet()["Normal"])
-style.fontSize = 15
-style.leading = 18
+front = deepcopy(getSampleStyleSheet()["Normal"])
+front.fontSize = 15
+front.leading = 18
 
-licensing = "Cards Against Humanity is a trademark of Cards Against Humanity, LLC. \
-Cards Against Humanity is distributed under a Creative Commons BY-NC-SA 2.0 license."
+back = deepcopy(getSampleStyleSheet()["Normal"])
+back.fontName = "Helvetica-Bold"
+back.fontSize = 35
+back.leading = 42
+
+phrase = "Calling All Heretics"
+assert ''.join(i[0] for i in phrase.split()) == "CAH"
 
 
 def not_special(card):
@@ -43,10 +48,7 @@ def draw_grid(pdf: Canvas):
         pdf.line(line_x_b, line_y, line_x_e, line_y)
 
 
-def write_page(pdf: Canvas, page):
-    draw_grid(pdf)
-    pdf.setFont("Times-Roman", 8, 10)
-    pdf.drawCentredString(page_width / 2, page_height - 13, licensing)
+def write_page(pdf: Canvas, page, image=True):
     for row_i in range(0, len(page), 3):
         row = page[row_i:row_i+3]
         for i in range(len(row)):
@@ -64,7 +66,10 @@ def write_page(pdf: Canvas, page):
             end_y -= text_offset_y
             end_y = page_height - end_y
 
-            card_p = Paragraph("<b>{}</b>".format(row[i]), style)
+            if image:
+                pdf.drawImage("cards.png", start_x, end_y, 30, 21)
+
+            card_p = row[i] if isinstance(row[i], Paragraph) else Paragraph("<b>{}</b>".format(row[i]), front)
             size = card_p.wrap(abs(end_x - start_x), abs(end_y - start_y))
             card_p.drawOn(pdf, start_x, start_y - size[1])
     pdf.showPage()
@@ -76,17 +81,27 @@ def write_file(cards, filename):
     file = Canvas(filename, pagesize=letter)
     try:
         for page_start in range(0, len(cards), 9):
+            draw_grid(file)
             write_page(file, cards[page_start:page_start + 9])
     finally:
         file.save()
 
 
+def write_back():
+    file = Canvas("card_pdf/back.pdf", pagesize=letter)
+    try:
+        write_page(file, [Paragraph("<br/>".join(phrase.split()), back) for _ in range(9)], False)
+    finally:
+        file.save()
+
+
 if __name__ == "__main__":
-    with open("cards/whites") as whites:
+    with open("card_lists/whites") as whites:
         white_cards = [card.strip() for card in whites if not_special(card)]
 
-    with open("cards/blacks") as blacks:
+    with open("card_lists/blacks") as blacks:
         black_cards = [card.strip() for card in blacks if not_special(card)]
 
-    write_file(white_cards, "test_white.pdf")
-    write_file(black_cards, "test_black.pdf")
+    write_file(white_cards, "card_pdf/test_white.pdf")
+    write_file(black_cards, "card_pdf/test_black.pdf")
+    write_back()
