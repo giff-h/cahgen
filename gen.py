@@ -27,12 +27,33 @@ back.fontName = "Helvetica-Bold"
 back.fontSize = 35
 back.leading = 42
 
+img_x = 30
+img_y = 21
+
+blank = "_" * 5
+
+phrase_fs = 7
 phrase = "Calling All Heretics"
 assert ''.join(i[0] for i in phrase.split()) == "CAH"
 
 
 def not_special(card):
     return not card.startswith("//") and card != "\n"
+
+
+def process_card(card):
+    return card.strip()
+
+
+def process_white(card):
+    return "<b>{}</b>".format(process_card(card)) if card else ""
+
+
+def process_black(card):
+    card = process_card(card)
+    processed = blank if card.startswith("_") else ""
+    processed += blank.join([x for x in card.split("_") if x])
+    return processed + blank if card.endswith("_") else processed
 
 
 def draw_grid(pdf: Canvas):
@@ -49,6 +70,7 @@ def draw_grid(pdf: Canvas):
 
 
 def write_page(pdf: Canvas, page, image=True):
+    pdf.setFont("Helvetica-Bold", phrase_fs)
     for row_i in range(0, len(page), 3):
         row = page[row_i:row_i+3]
         for i in range(len(row)):
@@ -67,9 +89,10 @@ def write_page(pdf: Canvas, page, image=True):
             end_y = page_height - end_y
 
             if image:
-                pdf.drawImage("cards.png", start_x, end_y, 30, 21)
+                pdf.drawImage("cards.png", start_x, end_y, img_x, img_y)
+                pdf.drawString(start_x + img_x + 5, end_y + img_y // 2 - phrase_fs // 2, phrase)
 
-            card_p = row[i] if isinstance(row[i], Paragraph) else Paragraph("<b>{}</b>".format(row[i]), front)
+            card_p = row[i] if isinstance(row[i], Paragraph) else Paragraph(row[i], front)
             size = card_p.wrap(abs(end_x - start_x), abs(end_y - start_y))
             card_p.drawOn(pdf, start_x, start_y - size[1])
     pdf.showPage()
@@ -97,10 +120,10 @@ def write_back():
 
 if __name__ == "__main__":
     with open("card_lists/whites") as whites:
-        white_cards = [card.strip() for card in whites if not_special(card)]
+        white_cards = [process_white(card) for card in whites if not_special(card)]
 
     with open("card_lists/blacks") as blacks:
-        black_cards = [card.strip() for card in blacks if not_special(card)]
+        black_cards = [process_black(card) for card in blacks if not_special(card)]
 
     write_file(white_cards, "card_pdf/test_white.pdf")
     write_file(black_cards, "card_pdf/test_black.pdf")
