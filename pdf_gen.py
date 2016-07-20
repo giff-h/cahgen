@@ -118,7 +118,7 @@ def write_page(pdf: Canvas, page, image, *options):
     pdf.showPage()
 
 
-def write_file(cards, filename, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w):
+def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w):
     card_wdt, card_hgt, cards_wide, cards_high,\
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
 
@@ -131,7 +131,7 @@ def write_file(cards, filename, card_wdt, card_hgt, margin_x, margin_y, title, i
 
     if not cards:
         return
-    file = Canvas(filename, pagesize=letter)
+    file = Canvas(output_fn, pagesize=letter)
     try:
         for page_start in range(0, len(cards), grid):
             draw_grid(file, card_wdt, card_hgt, cards_wide, cards_high,
@@ -143,11 +143,11 @@ def write_file(cards, filename, card_wdt, card_hgt, margin_x, margin_y, title, i
         file.save()
 
 
-def write_back(card_wdt, card_hgt, margin_x, margin_y, title):
+def write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title):
     card_wdt, card_hgt, cards_wide, cards_high,\
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
 
-    file = Canvas("card_pdf/back.pdf", pagesize=letter)
+    file = Canvas(output_fn, pagesize=letter)
     try:
         write_page(file, [Paragraph("<br/>".join(title.split()), back) for _ in range(9)], False,
                    card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
