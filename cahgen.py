@@ -21,7 +21,7 @@ def load_defaults():
     blank, width, height, side_margin, top_margin, title, front_fs, back_fs, icon, icon_width, output = hc_defaults
 
     config = ConfigParser()
-    config.read("cli.cfg")
+    config.read("cahgen.cfg")
     if "DEFAULTS" in config:
         defaults = config["DEFAULTS"]
         blank = int(defaults.get("blank", repr(blank)))
