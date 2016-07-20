@@ -4,7 +4,7 @@ A PDF generator for custom cards of everyone's favorite horrible person game, Ca
 
 ## Usage
 
-Typing `python cahgen.py` yields:
+Running `python3 cahgen.py` yields:
 
 ```
 Usage: cahgen.py [OPTIONS] COMMAND [ARGS]...
@@ -41,7 +41,7 @@ Commands:
 And each command has its own help with options. Example:
 
 ```
-$ python cahgen.py white --help
+$ python3 cahgen.py white --help
 Usage: cahgen.py white [OPTIONS] [LISTS]...
 
   Standard white card generator, given files that are lists of the contents
@@ -92,12 +92,14 @@ I've wanted this game for a long time, but I didn't want to stick with just the 
 
 ## Installation
 
-Requires Python 3.x and the `click` and `reportlab` python libraries. Currently this code is only available by cloning this repository, soon I will deploy this properly. I'm not paid, so it happens as I learn it.
+Requires Python 3.x and the `click` and `reportlab` python libraries. This can be achieved with `pip install -r requirements.txt`
+
+Currently this code is only available by cloning this repository, soon I will deploy this properly. I'm not paid for this, so it happens as I learn stuff.
 
 ## Feedback
 
 If the code broke on you, or if it does something you believe is unintended, or if you'd like to help at all, contact me at:
-* Twitter: [@hamstap85](https://twitter.com/hamstap85)
+* Twitter: [@hamstap85](https://twitter.com/hamstap85) (though I'm not really very active here currently)
 
 Sorry that's it for now, I don't even have any issue trackers running. This is literally my first publicly submitted software.
 
