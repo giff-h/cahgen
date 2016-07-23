@@ -3,41 +3,57 @@ from pdf_gen import set_style, process_blacks, process_whites, write_file, write
 import click
 from configparser import ConfigParser
 from os.path import basename, dirname, exists, isdir, join, splitext
+from reportlab.lib.colors import getAllNamedColors, HexColor
 
-hc_defaults = [5,                       # blank
-               2.5,                     # width
-               3.5,                     # height
-               10,                      # side_margin
-               10,                      # top_margin
-               "Calling All Heretics",  # title
-               14,                      # front_fs
-               35,                      # back_fs
-               "cards.png",             # icon
-               30,                      # icon_width
-               '']                      # output
+hc_defaults = {"blank": 5,
+               "width": 2.5,
+               "height": 3.5,
+               "side_margin": 10,
+               "top_margin": 10,
+               "title": "Calling All Heretics",
+               "front_fs": 14,
+               "back_fs": 35,
+               "icon": "cards.png",
+               "icon_width": 30,
+               "stripe_color": '',
+               "stripe_text": '',
+               "output": ''}
+colors = getAllNamedColors()
+config_fn = "cahgen.cfg"
 
 
 def load_defaults():
-    blank, width, height, side_margin, top_margin, title, front_fs, back_fs, icon, icon_width, output = hc_defaults
-
     config = ConfigParser()
-    config.read("cahgen.cfg")
+    config.read(config_fn)
     if "DEFAULTS" in config:
         defaults = config["DEFAULTS"]
-        blank = int(defaults.get("blank", repr(blank)))
-        width = float(defaults.get("width", repr(width)))
-        height = float(defaults.get("height", repr(height)))
-        side_margin = int(defaults.get("side_margin", repr(side_margin)))
-        top_margin = int(defaults.get("top_margin", repr(top_margin)))
-        title = defaults.get("title", title)
-        front_fs = int(defaults.get("front_fs", repr(front_fs)))
-        back_fs = int(defaults.get("back_fs", repr(back_fs)))
-        icon = defaults.get("icon", icon)
-        icon_width = int(defaults.get("icon_width", repr(icon_width)))
-        output = defaults.get("output", output)
+        loaded = dict()
+        for i in ("blank", "side_margin", "top_margin", "front_fs", "back_fs", "icon_width"):
+            loaded[i] = int(defaults.get(i, hc_defaults[i]))
+        for f in ("width", "height"):
+            loaded[f] = float(defaults.get(f, hc_defaults[f]))
+        for s in ("title", "icon", "stripe_color", "stripe_text", "output"):
+            loaded[s] = defaults.get(s, hc_defaults[s])
+        return loaded
+    else:
+        return hc_defaults
 
-    return blank, width, height, side_margin, top_margin, title, \
-        front_fs, back_fs, icon, icon_width, output
+
+def validate_stripe_color(ctx, param, value):
+    if value == '':
+        return None
+    if value.startswith('#'):
+        try:
+            color = HexColor(value)
+        except ValueError:
+            raise click.BadParameter(repr(value) + " is an invalid hex color value")
+    else:
+        if value in colors:
+            color = colors[value]
+        else:
+            raise click.BadParameter(repr(value) + " is not a known color")
+
+    return color
 
 
 def validate_output(ctx, param, value):
@@ -80,29 +96,35 @@ class TitleType(click.ParamType):
 
 TITLE_TYPE = TitleType()
 
-default_blank, default_width, default_height, default_side_margin, default_top_margin, default_title, \
-    default_front_fs, default_back_fs, default_icon, default_icon_width, default_output = load_defaults()
+loaded_defaults = load_defaults()
 
-blank_help = "Number of underscores to normalize the size of the blank spaces to in the black cards. \
+help_blank = "Number of underscores to normalize the size of the blank spaces to in the black cards. \
 Meant to prevent you from pulling your hair out making sure all the blank marks are the same. Defaults to {}. \
-If set to 0, no normalizing will be done".format(hc_defaults[0])
-width_help = "Width of each card in inches. Defaults to {}".format(hc_defaults[1])
-height_help = "Height of each card in inches. Defaults to {}".format(hc_defaults[2])
-sm_help = "Left and right card print margin in pixels. Defaults to {}".format(hc_defaults[3])
-tm_help = "Top and bottom card print margin in pixels. Defaults to {}".format(hc_defaults[4])
-title_help = "The game title to be printed on the back and the bottom of the front of all the cards. \
+If set to 0, no normalizing will be done".format(hc_defaults["blank"])
+help_width = "Width of each card in inches. Defaults to {}".format(hc_defaults["width"])
+help_height = "Height of each card in inches. Defaults to {}".format(hc_defaults["height"])
+help_sm = "Left and right card print margin in pixels. Defaults to {}".format(hc_defaults["side_margin"])
+help_tm = "Top and bottom card print margin in pixels. Defaults to {}".format(hc_defaults["top_margin"])
+help_title = "The game title to be printed on the back and the bottom of the front of all the cards. \
 Make sure it's an acronym of CAH. Note that the original game phrase is trademarked. \
-Defaults to {}".format(hc_defaults[5])
-release_title_restrict_help = "If enabled, will not restrict the title to an acronym of CAH. \
+Defaults to {}".format(hc_defaults["title"])
+help_release_title_restrict = "If enabled, will not restrict the title to an acronym of CAH. \
 The title will be exactly as given. WARNING it currently does not work. If anyone knows the python click library, \
 can you help me out?"
-font_size_help = "Font size of the text printed on the card. \
+help_font_size = "Font size of the text printed on the card. \
 Does not automatically check whether a huge message will print correctly on the card. Please check your output files. \
 Defaults to {}"
-icon_help = "Image file to be used as the icon on the front of the card. Defaults to {}".format(hc_defaults[8])
-icon_width_help = "Pixel width to print the icon on the front of the card. \
-Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults[9])
-output_help = "Output directory to write the pdf files. Defaults to {} directory"
+help_icon = "Image file to be used as the icon on the front of the card. Defaults to {}".format(hc_defaults["icon"])
+help_icon_width = "Pixel width to print the icon on the front of the card. \
+Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults["width"])
+help_stripe_color = "The stripe at the bottom of the card, meant to distinguish various packs. \
+Either a standard color, or a hex RGB(a) value if started with '#'. \
+Example: `--stripe-color crimson` or `--stripe-color #DC143C` or `--stripe-color #DC143CFF` are all the same. \
+If left unset, even with text given, no stripe will be printed."
+help_stripe_text = "The stripe at the bottom of the card, meant to distinguish various packs. \
+The text to be printed into the stripe. Always black. If a color is given but no text is given, \
+a stripe will still be printed"
+help_output = "Output directory to write the pdf files. Defaults to {} directory"
 
 
 @click.group()
@@ -126,18 +148,18 @@ def cli():
 
 
 @cli.command(short_help="process white card lists")
-@click.option("--width", default=default_width, callback=validate_positive, help=width_help)
-@click.option("--height", default=default_height, callback=validate_positive, help=height_help)
-@click.option("--side-margin", default=default_side_margin, callback=validate_positive, help=sm_help)
-@click.option("--top-margin", default=default_top_margin, callback=validate_positive, help=tm_help)
-@click.option("--title", type=TITLE_TYPE, default=default_title, help=title_help)
-@click.option("--release-title-restrict", is_flag=True, help=release_title_restrict_help)
-@click.option("--font-size", default=default_front_fs, callback=validate_positive,
-              help=font_size_help.format(hc_defaults[6]))
-@click.option("--icon", type=click.Path(exists=True), default=default_icon, help=icon_help)
-@click.option("--icon-width", default=default_icon_width, callback=validate_positive, help=icon_width_help)
-@click.option("--output", type=click.Path(), default=default_output, callback=validate_output,
-              help=output_help.format("the same"))
+@click.option("--width", default=loaded_defaults["width"], callback=validate_positive, help=help_width)
+@click.option("--height", default=loaded_defaults["height"], callback=validate_positive, help=help_height)
+@click.option("--side-margin", default=loaded_defaults["side_margin"], callback=validate_positive, help=help_sm)
+@click.option("--top-margin", default=loaded_defaults["top_margin"], callback=validate_positive, help=help_tm)
+@click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
+@click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
+@click.option("--font-size", default=loaded_defaults["front_fs"], callback=validate_positive,
+              help=help_font_size.format(hc_defaults["front_fs"]))
+@click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
+@click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
+@click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
+              help=help_output.format("the same"))
 @click.argument("lists", nargs=-1, type=click.File())
 def white(width, height, side_margin, top_margin, title, release_title_restrict,
           font_size, icon, icon_width, output, lists):
@@ -154,19 +176,19 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
 
 
 @cli.command(short_help="process black card lists")
-@click.option("--blank", default=default_blank, callback=validate_blank, help=blank_help)
-@click.option("--width", default=default_width, callback=validate_positive, help=width_help)
-@click.option("--height", default=default_height, callback=validate_positive, help=height_help)
-@click.option("--side-margin", default=default_side_margin, callback=validate_positive, help=sm_help)
-@click.option("--top-margin", default=default_top_margin, callback=validate_positive, help=tm_help)
-@click.option("--title", type=TITLE_TYPE, default=default_title, help=title_help)
-@click.option("--release-title-restrict", is_flag=True, help=release_title_restrict_help)
-@click.option("--font-size", default=default_front_fs, callback=validate_positive,
-              help=font_size_help.format(hc_defaults[6]))
-@click.option("--icon", type=click.Path(exists=True), default=default_icon, help=icon_help)
-@click.option("--icon-width", default=default_icon_width, callback=validate_positive, help=icon_width_help)
-@click.option("--output", type=click.Path(), default=default_output, callback=validate_output,
-              help=output_help.format("the same"))
+@click.option("--blank", default=loaded_defaults["blank"], callback=validate_blank, help=help_blank)
+@click.option("--width", default=loaded_defaults["width"], callback=validate_positive, help=help_width)
+@click.option("--height", default=loaded_defaults["height"], callback=validate_positive, help=help_height)
+@click.option("--side-margin", default=loaded_defaults["side_margin"], callback=validate_positive, help=help_sm)
+@click.option("--top-margin", default=loaded_defaults["top_margin"], callback=validate_positive, help=help_tm)
+@click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
+@click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
+@click.option("--font-size", default=loaded_defaults["front_fs"], callback=validate_positive,
+              help=help_font_size.format(hc_defaults["front_fs"]))
+@click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
+@click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
+@click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
+              help=help_output.format("the same"))
 @click.argument("lists", nargs=-1, type=click.File())
 def black(blank, width, height, side_margin, top_margin, title, release_title_restrict,
           font_size, icon, icon_width, output, lists):
@@ -183,23 +205,39 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
 
 
 @cli.command(short_help="print single page of card backs")
-@click.option("--width", default=default_width, callback=validate_positive, help=width_help)
-@click.option("--height", default=default_height, callback=validate_positive, help=height_help)
-@click.option("--side-margin", default=default_side_margin, callback=validate_positive, help=sm_help)
-@click.option("--top-margin", default=default_top_margin, callback=validate_positive, help=tm_help)
-@click.option("--title", type=TITLE_TYPE, default=default_title, help=title_help)
-@click.option("--release-title-restrict", is_flag=True, help=release_title_restrict_help)
-@click.option("--font-size", default=default_back_fs, callback=validate_positive,
-              help=font_size_help.format(hc_defaults[7]))
-@click.option("--output", type=click.Path(), default=default_output, callback=validate_output,
-              help=output_help.format("current"))
-def back(width, height, side_margin, top_margin, title, release_title_restrict, font_size, output):
+@click.option("--width", default=loaded_defaults["width"], callback=validate_positive, help=help_width)
+@click.option("--height", default=loaded_defaults["height"], callback=validate_positive, help=help_height)
+@click.option("--side-margin", default=loaded_defaults["side_margin"], callback=validate_positive, help=help_sm)
+@click.option("--top-margin", default=loaded_defaults["top_margin"], callback=validate_positive, help=help_tm)
+@click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
+@click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
+@click.option("--font-size", default=loaded_defaults["back_fs"], callback=validate_positive,
+              help=help_font_size.format(hc_defaults["back_fs"]))
+@click.option("--stripe-color", default=loaded_defaults["stripe_color"], callback=validate_stripe_color,
+              help=help_stripe_color)
+@click.option("--stripe-text", default=loaded_defaults["stripe_text"], help=help_stripe_text)
+@click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
+              help=help_output.format("current"))
+def back(width, height, side_margin, top_margin, title, release_title_restrict, font_size,
+         stripe_color, stripe_text, output):
     """Prints the back of the cards as a one-page pdf, meant to be printed on the reverse side of the cards.
     Writes to back.pdf, in the --output directory if supplied or current directory otherwise"""
 
     set_style(font_size, False)
     output = join(output if output else "./", "back.pdf")
-    write_back(output, width, height, side_margin, top_margin, title)
+    write_back(output, width, height, side_margin, top_margin, title, stripe_color, stripe_text)
+
+
+@cli.command(short_help="Write standard config file for editing")
+def cfg():
+    """Writes all the hardcoded defaults to the config file for easy editing. No more scurrying for obscure
+    config API listings! This creates a simple editable file to be read right back into the program! Holy easy
+    customizing Batman!!"""
+
+    config = ConfigParser()
+    config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items()}
+    with open(config_fn, mode="w") as file:
+        config.write(file)
 
 
 if __name__ == "__main__":

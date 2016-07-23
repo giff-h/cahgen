@@ -2,6 +2,7 @@ from img_size import get_image_size
 
 from copy import deepcopy
 
+from reportlab.lib.colors import black
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -87,10 +88,9 @@ def draw_grid(pdf: Canvas, *options):
         pdf.line(line_x_b, line_y, line_x_e, line_y)
 
 
-def write_page(pdf: Canvas, page, image, *options):
-    card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,\
-        icon_fn, icon_w, icon_h, title = options
-    pdf.setFont("Helvetica-Bold", title_font_size)
+def write_page(pdf: Canvas, page, has_image, card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top,
+               margin_x, margin_y, icon_fn, icon_w, icon_h, title, stripe_color=None, stripe_text=None):
+    pdf.setFont("Helvetica-Bold", title_font_size if has_image else int(margin_y) - 1)
     for row_i in range(0, len(page), cards_wide):
         row = page[row_i:row_i + cards_wide]
         for i in range(len(row)):
@@ -108,18 +108,24 @@ def write_page(pdf: Canvas, page, image, *options):
             end_y -= margin_y
             end_y = page_height - end_y
 
-            if image:
+            if has_image:
                 pdf.drawImage(icon_fn, start_x, end_y, icon_w, icon_h)
                 pdf.drawString(start_x + icon_w + 5, end_y + icon_h // 2 - title_font_size // 2, title)
+            elif stripe_color and stripe_text is not None:
+                pdf.setFillColor(stripe_color)
+                pdf.rect(start_x - margin_x, end_y - margin_y, card_wdt, margin_y, fill=1)
+                pdf.setFillColor(black)
+                pdf.drawString(start_x, end_y - round(margin_y * 0.8), stripe_text)
 
             card_p = row[i] if isinstance(row[i], Paragraph) else Paragraph(row[i], front)
             size = card_p.wrap(abs(end_x - start_x), abs(end_y - start_y))
             card_p.drawOn(pdf, start_x, start_y - size[1])
+
     pdf.showPage()
 
 
 def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w):
-    card_wdt, card_hgt, cards_wide, cards_high,\
+    card_wdt, card_hgt, cards_wide, cards_high, \
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
 
     src_img = get_image_size(icon_fn)
@@ -143,14 +149,22 @@ def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, 
         file.save()
 
 
-def write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title):
+def write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title, stripe_color=None, stripe_text=None):
     card_wdt, card_hgt, cards_wide, cards_high,\
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
 
     file = Canvas(output_fn, pagesize=letter)
     try:
-        write_page(file, [Paragraph("<br/>".join(title.split()), back) for _ in range(9)], False,
+        if stripe_color:
+            file.setStrokeColor(stripe_color)
+        write_page(file, [Paragraph("<br/>".join(title.split()), back) for _ in range(grid)], False,
                    card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
-                   "", 0, 0, title)
+                   "", 0, 0, title, stripe_color, stripe_text)
     finally:
         file.save()
+
+
+if __name__ == '__main__':
+    from reportlab.lib.colors import crimson
+    set_style(35, False)
+    write_back("cards/test_back.pdf", 2.5, 3.5, 10.0, 10.0, "Calling All Heretics", crimson, "Test pack 1")
