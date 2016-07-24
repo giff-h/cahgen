@@ -116,7 +116,7 @@ Does not automatically check whether a huge message will print correctly on the 
 Defaults to {}"
 help_icon = "Image file to be used as the icon on the front of the card. Defaults to {}".format(hc_defaults["icon"])
 help_icon_width = "Pixel width to print the icon on the front of the card. \
-Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults["width"])
+Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults["icon_width"])
 help_stripe_color = "The stripe at the bottom of the card, meant to distinguish various packs. \
 Either a standard color, or a hex RGB(a) value if started with '#'. \
 Example: `--stripe-color crimson` or `--stripe-color #DC143C` or `--stripe-color #DC143CFF` are all the same. \

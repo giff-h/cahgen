@@ -35,6 +35,7 @@ Options:
 Commands:
   back   print single page of card backs
   black  process black card lists
+  cfg    Write standard config file for editing
   white  process white card lists
 ```
 
