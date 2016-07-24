@@ -33,10 +33,11 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  back   print single page of card backs
-  black  process black card lists
-  cfg    Write standard config file for editing
-  white  process white card lists
+  back        print single page of card backs
+  black       process black card lists
+  cfg         Write standard config file for editing
+  listcolors  List all available named colors
+  white       process white card lists
 ```
 
 And each command has its own help with options. Example:

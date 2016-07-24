@@ -124,7 +124,9 @@ If left unset, even with text given, no stripe will be printed."
 help_stripe_text = "The stripe at the bottom of the card, meant to distinguish various packs. \
 The text to be printed into the stripe. Always black. If a color is given but no text is given, \
 a stripe will still be printed"
-help_output = "Output directory to write the pdf files. Defaults to {} directory"
+help_output = "Output {} to write the pdf files. Defaults to {}"
+help_contains = "Limit the printed colors to anything containing the given string. \
+Remember that this will not be the entire list available. Does not support wildcard at the moment."
 
 
 @click.group()
@@ -159,7 +161,7 @@ def cli():
 @click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
-              help=help_output.format("the same"))
+              help=help_output.format("directory", "the same directory"))
 @click.argument("lists", nargs=-1, type=click.File())
 def white(width, height, side_margin, top_margin, title, release_title_restrict,
           font_size, icon, icon_width, output, lists):
@@ -170,9 +172,9 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
 
     set_style(font_size, True)
     for file in lists:
+        output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
         cards = process_whites(file.readlines())
-        output = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
-        write_file(cards, output, width, height, side_margin, top_margin, title, icon, icon_width)
+        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width)
 
 
 @cli.command(short_help="process black card lists")
@@ -188,7 +190,7 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
 @click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
-              help=help_output.format("the same"))
+              help=help_output.format("directory", "the same directory"))
 @click.argument("lists", nargs=-1, type=click.File())
 def black(blank, width, height, side_margin, top_margin, title, release_title_restrict,
           font_size, icon, icon_width, output, lists):
@@ -199,9 +201,9 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
 
     set_style(font_size, True)
     for file in lists:
-        output = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
+        output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
         cards = process_blacks(file.readlines(), blank)
-        write_file(cards, output, width, height, side_margin, top_margin, title, icon, icon_width)
+        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width)
 
 
 @cli.command(short_help="print single page of card backs")
@@ -216,15 +218,16 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
 @click.option("--stripe-color", default=loaded_defaults["stripe_color"], callback=validate_stripe_color,
               help=help_stripe_color)
 @click.option("--stripe-text", default=loaded_defaults["stripe_text"], help=help_stripe_text)
-@click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
-              help=help_output.format("current"))
+@click.option("--output", type=click.Path(), default=loaded_defaults["output"],
+              help=help_output.format("file", "./back.pdf"))
 def back(width, height, side_margin, top_margin, title, release_title_restrict, font_size,
          stripe_color, stripe_text, output):
     """Prints the back of the cards as a one-page pdf, meant to be printed on the reverse side of the cards.
     Writes to back.pdf, in the --output directory if supplied or current directory otherwise"""
 
     set_style(font_size, False)
-    output = join(output if output else "./", "back.pdf")
+    if not output:
+        output = join('.', "back.pdf")
     write_back(output, width, height, side_margin, top_margin, title, stripe_color, stripe_text)
 
 
@@ -238,6 +241,27 @@ def cfg():
     config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items()}
     with open(config_fn, mode="w") as file:
         config.write(file)
+
+
+@cli.command(short_help="List all available named colors")
+@click.option("--contains", default='', help=help_contains)
+def listcolors(contains):
+    """List all the colors available to be used in the --stripe-color option of the `back` command"""
+
+    color_names = sorted(color for color in colors.keys() if contains in color)
+    length = len(max(color_names, key=len)) + 3  # max length color name + column gap of 5
+    columns = 3
+    column_len, add_one = divmod(len(color_names), columns)
+    if add_one:
+        column_len += 1
+    columns_list = []
+    for i in range(0, len(color_names), column_len):
+        column = [color.ljust(length, ' ') for color in color_names[i:i+column_len]]
+        if len(column) != column_len:
+            column.append('')
+        columns_list.append(column)
+    for row in zip(*columns_list):
+        click.echo(''.join(row))
 
 
 if __name__ == "__main__":
