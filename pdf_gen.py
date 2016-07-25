@@ -16,6 +16,10 @@ back.fontName = "Helvetica-Bold"
 title_font_size = 7
 
 
+def card_back(title, grid):
+    return [Paragraph("<br/>".join(title.split()), back) for _ in range(grid)]
+
+
 def set_style(font_size, is_front):
     if is_front:
         front.fontSize = font_size
@@ -124,7 +128,8 @@ def write_page(pdf: Canvas, page, has_image, card_wdt, card_hgt, cards_wide, gri
     pdf.showPage()
 
 
-def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w):
+def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w,
+               stripe_color=None, stripe_text='', duplex=False):
     card_wdt, card_hgt, cards_wide, cards_high, \
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
 
@@ -137,14 +142,23 @@ def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, 
 
     if not cards:
         return
+
     file = Canvas(output_fn, pagesize=letter)
     try:
         for page_start in range(0, len(cards), grid):
+            if stripe_color:
+                file.setStrokeColor(black)
             draw_grid(file, card_wdt, card_hgt, cards_wide, cards_high,
                       grid_start_left, grid_start_top, grid_stop_right, grid_stop_bottom)
             write_page(file, cards[page_start:page_start + grid], True,
                        card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
                        icon_fn, icon_w, icon_h, title)
+            if duplex:
+                if stripe_color:
+                    file.setStrokeColor(stripe_color)
+                write_page(file, card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
+                           grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title,
+                           stripe_color, stripe_text)
     finally:
         file.save()
 
@@ -157,9 +171,8 @@ def write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title, stripe_
     try:
         if stripe_color:
             file.setStrokeColor(stripe_color)
-        write_page(file, [Paragraph("<br/>".join(title.split()), back) for _ in range(grid)], False,
-                   card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
-                   "", 0, 0, title, stripe_color, stripe_text)
+        write_page(file, card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
+                   grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title, stripe_color, stripe_text)
     finally:
         file.save()
 

@@ -1,8 +1,9 @@
 from pdf_gen import set_style, process_blacks, process_whites, write_file, write_back
+from gui import run
 
 import click
 from configparser import ConfigParser
-from os.path import basename, dirname, exists, isdir, join, splitext
+from os.path import basename, dirname, exists, isdir, join, realpath, splitext
 from reportlab.lib.colors import getAllNamedColors, HexColor
 
 hc_defaults = {"blank": 5,
@@ -13,30 +14,27 @@ hc_defaults = {"blank": 5,
                "title": "Calling All Heretics",
                "front_fs": 14,
                "back_fs": 35,
-               "icon": "cards.png",
+               "icon": join(dirname(realpath(__file__)), "cards.png"),
                "icon_width": 30,
                "stripe_color": '',
                "stripe_text": '',
                "output": ''}
 colors = getAllNamedColors()
 config_fn = "cahgen.cfg"
+loaded_defaults = dict()
 
 
-def load_defaults():
+def load_defaults(loaded):
     config = ConfigParser()
     config.read(config_fn)
     if "DEFAULTS" in config:
         defaults = config["DEFAULTS"]
-        loaded = dict()
-        for i in ("blank", "side_margin", "top_margin", "front_fs", "back_fs", "icon_width"):
-            loaded[i] = int(defaults.get(i, hc_defaults[i]))
-        for f in ("width", "height"):
-            loaded[f] = float(defaults.get(f, hc_defaults[f]))
-        for s in ("title", "icon", "stripe_color", "stripe_text", "output"):
-            loaded[s] = defaults.get(s, hc_defaults[s])
-        return loaded
+        for param in hc_defaults.keys():
+            param_type = type(hc_defaults[param])
+            loaded[param] = param_type(defaults.get(param, hc_defaults[param]))
     else:
-        return hc_defaults
+        for k, v in hc_defaults.items():
+            loaded[k] = v
 
 
 def validate_stripe_color(ctx, param, value):
@@ -95,12 +93,11 @@ class TitleType(click.ParamType):
 
 
 TITLE_TYPE = TitleType()
-
-loaded_defaults = load_defaults()
+load_defaults(loaded_defaults)
 
 help_blank = "Number of underscores to normalize the size of the blank spaces to in the black cards. \
 Meant to prevent you from pulling your hair out making sure all the blank marks are the same. Defaults to {}. \
-If set to 0, no normalizing will be done".format(hc_defaults["blank"])
+If set to 0, no normalizing will be done.".format(hc_defaults["blank"])
 help_width = "Width of each card in inches. Defaults to {}".format(hc_defaults["width"])
 help_height = "Height of each card in inches. Defaults to {}".format(hc_defaults["height"])
 help_sm = "Left and right card print margin in pixels. Defaults to {}".format(hc_defaults["side_margin"])
@@ -114,7 +111,7 @@ can you help me out?"
 help_font_size = "Font size of the text printed on the card. \
 Does not automatically check whether a huge message will print correctly on the card. Please check your output files. \
 Defaults to {}"
-help_icon = "Image file to be used as the icon on the front of the card. Defaults to {}".format(hc_defaults["icon"])
+help_icon = "Image file to be used as the icon on the front of the card."
 help_icon_width = "Pixel width to print the icon on the front of the card. \
 Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults["icon_width"])
 help_stripe_color = "The stripe at the bottom of the card, meant to distinguish various packs. \
@@ -123,10 +120,12 @@ Example: `--stripe-color crimson` or `--stripe-color #DC143C` or `--stripe-color
 If left unset, even with text given, no stripe will be printed."
 help_stripe_text = "The stripe at the bottom of the card, meant to distinguish various packs. \
 The text to be printed into the stripe. Always black. If a color is given but no text is given, \
-a stripe will still be printed"
+a stripe will still be printed."
 help_output = "Output {} to write the pdf files. Defaults to {}"
 help_contains = "Limit the printed colors to anything containing the given string. \
 Remember that this will not be the entire list available. Does not support wildcard at the moment."
+help_duplex = "If set then the backs will be written alternating the fronts. \
+The options that would be fed to the back command must be given using the config file."
 
 
 @click.group()
@@ -162,19 +161,28 @@ def cli():
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
               help=help_output.format("directory", "the same directory"))
+@click.option("--duplex", is_flag=True, help=help_duplex)
 @click.argument("lists", nargs=-1, type=click.File())
 def white(width, height, side_margin, top_margin, title, release_title_restrict,
-          font_size, icon, icon_width, output, lists):
+          font_size, icon, icon_width, output, duplex, lists):
     """Standard white card generator, given files that are lists of the contents of the cards.
     The output is written to [input_filename].pdf and will replace any preexisting file.
     If the --output option is supplied, the file will be written to that directory, instead of the same as the input
     files."""
 
     set_style(font_size, True)
+    if duplex:
+        set_style(loaded_defaults["back_fs"], False)
+        stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
+        stripe_text = loaded_defaults["stripe_text"]
+    else:
+        stripe_color = None
+        stripe_text = ''
     for file in lists:
         output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
         cards = process_whites(file.readlines())
-        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width)
+        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
+                   stripe_color, stripe_text, duplex)
 
 
 @cli.command(short_help="process black card lists")
@@ -191,19 +199,28 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
               help=help_output.format("directory", "the same directory"))
+@click.option("--duplex", is_flag=True, help=help_duplex)
 @click.argument("lists", nargs=-1, type=click.File())
 def black(blank, width, height, side_margin, top_margin, title, release_title_restrict,
-          font_size, icon, icon_width, output, lists):
+          font_size, icon, icon_width, output, duplex, lists):
     """Standard black card generator, given files that are lists of the contents of the cards.
     The output is written to [input_filename].pdf and will replace any preexisting file.
     If the --output option is supplied, the file will be written to that directory, instead of the same as the input
     files."""
 
     set_style(font_size, True)
+    if duplex:
+        set_style(loaded_defaults["back_fs"], False)
+        stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
+        stripe_text = loaded_defaults["stripe_text"]
+    else:
+        stripe_color = None
+        stripe_text = ''
     for file in lists:
         output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
         cards = process_blacks(file.readlines(), blank)
-        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width)
+        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
+                   stripe_color, stripe_text, duplex)
 
 
 @cli.command(short_help="print single page of card backs")
@@ -223,7 +240,8 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
 def back(width, height, side_margin, top_margin, title, release_title_restrict, font_size,
          stripe_color, stripe_text, output):
     """Prints the back of the cards as a one-page pdf, meant to be printed on the reverse side of the cards.
-    Writes to back.pdf, in the --output directory if supplied or current directory otherwise"""
+    Writes to back.pdf, in the --output directory if supplied or current directory otherwise. Still useful
+    with the duplex option of the blacks/whites, as it gives you a preview of the back"""
 
     set_style(font_size, False)
     if not output:
@@ -238,7 +256,8 @@ def cfg():
     customizing Batman!!"""
 
     config = ConfigParser()
-    config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items()}
+    config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items() if k != "icon"}
+    config["DEFAULTS"]["icon"] = basename(hc_defaults["icon"])
     with open(config_fn, mode="w") as file:
         config.write(file)
 
@@ -246,22 +265,29 @@ def cfg():
 @cli.command(short_help="List all available named colors")
 @click.option("--contains", default='', help=help_contains)
 def listcolors(contains):
-    """List all the colors available to be used in the --stripe-color option of the `back` command"""
+    """List all the colors available to use in the --stripe-color option of the `back` command"""
 
     color_names = sorted(color for color in colors.keys() if contains in color)
-    length = len(max(color_names, key=len)) + 3  # max length color name + column gap of 5
-    columns = 3
-    column_len, add_one = divmod(len(color_names), columns)
-    if add_one:
-        column_len += 1
-    columns_list = []
-    for i in range(0, len(color_names), column_len):
-        column = [color.ljust(length, ' ') for color in color_names[i:i+column_len]]
-        if len(column) != column_len:
-            column.append('')
-        columns_list.append(column)
-    for row in zip(*columns_list):
-        click.echo(''.join(row))
+    if color_names:
+        length = len(max(color_names, key=len)) + 3  # max length color name + column gap of 5
+        columns = 3
+        column_len, add_one = divmod(len(color_names), columns)
+        if add_one:
+            column_len += 1
+        columns_list = []
+        for i in range(0, len(color_names), column_len):
+            column = [color.ljust(length, ' ') for color in color_names[i:i+column_len]]
+            if len(column) != column_len:
+                column.append('')
+            columns_list.append(column)
+        for row in zip(*columns_list):
+            click.echo(''.join(row))
+
+
+@cli.command(short_help="Run the windowed program")
+def gui():
+    """Start the gui of the program for more advanced handling of files"""
+    run()
 
 
 if __name__ == "__main__":
