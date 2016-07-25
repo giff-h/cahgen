@@ -16,11 +16,48 @@ back.fontName = "Helvetica-Bold"
 title_font_size = 7
 
 
-def card_back(title, grid):
+class PackProfile:
+    def __init__(self):
+        pass
+
+
+class PDFWriter:
+    def __init__(self):
+        pass
+
+    def draw_page(self):
+        pass
+
+
+class WhiteCardWriter(PDFWriter):
+    def __init__(self):
+        super().__init__()
+
+    def draw_page(self):
+        pass
+
+
+class BlackCardWriter(PDFWriter):
+    def __init__(self):
+        super().__init__()
+
+    def draw_page(self):
+        pass
+
+
+class CardBackWriter(PDFWriter):
+    def __init__(self):
+        super().__init__()
+
+    def draw_page(self):
+        pass
+
+
+def old_card_back(title, grid):
     return [Paragraph("<br/>".join(title.split()), back) for _ in range(grid)]
 
 
-def set_style(font_size, is_front):
+def old_set_style(font_size, is_front):
     if is_front:
         front.fontSize = font_size
         front.leading = round(front.fontSize * 1.2)
@@ -29,7 +66,7 @@ def set_style(font_size, is_front):
         back.leading = round(back.fontSize * 1.2)
 
 
-def process_grid(card_wdt, card_hgt):
+def old_process_grid(card_wdt, card_hgt):
     card_wdt *= inch
     card_hgt *= inch
 
@@ -48,20 +85,20 @@ def process_grid(card_wdt, card_hgt):
         grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid
 
 
-def not_special(card):
+def old_not_special(card):
     return not card.startswith("//") and card != "\n"
 
 
-def process_card(card):
+def old_process_card(card):
     return card.strip()
 
 
-def process_white(card):
-    return "<b>{}</b>".format(process_card(card)) if card else ""
+def old_process_white(card):
+    return "<b>{}</b>".format(old_process_card(card)) if card else ""
 
 
-def process_black(card, blank):
-    card = process_card(card)
+def old_process_black(card, blank):
+    card = old_process_card(card)
     if blank:
         processed = blank if card.startswith("_") else ""
         processed += blank.join([x for x in card.split("_") if x])
@@ -69,15 +106,15 @@ def process_black(card, blank):
     return "<b>{}</b>".format(card)
 
 
-def process_whites(cards):
-    return [process_white(card) for card in cards if not_special(card)]
+def old_process_whites(cards):
+    return [old_process_white(card) for card in cards if old_not_special(card)]
 
 
-def process_blacks(cards, normalize):
-    return [process_black(card, normalize) for card in cards if not_special(card)]
+def old_process_blacks(cards, normalize):
+    return [old_process_black(card, normalize) for card in cards if old_not_special(card)]
 
 
-def draw_grid(pdf: Canvas, *options):
+def old_draw_grid(pdf: Canvas, *options):
     card_wdt, card_hgt, cards_wide, cards_high,\
         grid_start_left, grid_start_top, grid_stop_right, grid_stop_bottom = options
     for x in range(cards_wide + 1):
@@ -92,8 +129,8 @@ def draw_grid(pdf: Canvas, *options):
         pdf.line(line_x_b, line_y, line_x_e, line_y)
 
 
-def write_page(pdf: Canvas, page, has_image, card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top,
-               margin_x, margin_y, icon_fn, icon_w, icon_h, title, stripe_color=None, stripe_text=None):
+def old_write_page(pdf: Canvas, page, has_image, card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top,
+                   margin_x, margin_y, icon_fn, icon_w, icon_h, title, stripe_color=None, stripe_text=None):
     pdf.setFont("Helvetica-Bold", title_font_size if has_image else int(margin_y) - 1)
     for row_i in range(0, len(page), cards_wide):
         row = page[row_i:row_i + cards_wide]
@@ -128,10 +165,10 @@ def write_page(pdf: Canvas, page, has_image, card_wdt, card_hgt, cards_wide, gri
     pdf.showPage()
 
 
-def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w,
-               stripe_color=None, stripe_text='', duplex=False):
+def old_write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, icon_fn, icon_w,
+                   stripe_color=None, stripe_text='', duplex=False):
     card_wdt, card_hgt, cards_wide, cards_high, \
-        grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
+        grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = old_process_grid(card_wdt, card_hgt)
 
     src_img = get_image_size(icon_fn)
     if src_img:
@@ -148,36 +185,36 @@ def write_file(cards, output_fn, card_wdt, card_hgt, margin_x, margin_y, title, 
         for page_start in range(0, len(cards), grid):
             if stripe_color:
                 file.setStrokeColor(black)
-            draw_grid(file, card_wdt, card_hgt, cards_wide, cards_high,
-                      grid_start_left, grid_start_top, grid_stop_right, grid_stop_bottom)
-            write_page(file, cards[page_start:page_start + grid], True,
-                       card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
-                       icon_fn, icon_w, icon_h, title)
+            old_draw_grid(file, card_wdt, card_hgt, cards_wide, cards_high,
+                          grid_start_left, grid_start_top, grid_stop_right, grid_stop_bottom)
+            old_write_page(file, cards[page_start:page_start + grid], True,
+                           card_wdt, card_hgt, cards_wide, grid_start_left, grid_start_top, margin_x, margin_y,
+                           icon_fn, icon_w, icon_h, title)
             if duplex:
                 if stripe_color:
                     file.setStrokeColor(stripe_color)
-                write_page(file, card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
-                           grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title,
-                           stripe_color, stripe_text)
+                old_write_page(file, old_card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
+                               grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title,
+                               stripe_color, stripe_text)
     finally:
         file.save()
 
 
-def write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title, stripe_color=None, stripe_text=None):
+def old_write_back(output_fn, card_wdt, card_hgt, margin_x, margin_y, title, stripe_color=None, stripe_text=None):
     card_wdt, card_hgt, cards_wide, cards_high,\
-        grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = process_grid(card_wdt, card_hgt)
+        grid_start_top, grid_start_left, grid_stop_right, grid_stop_bottom, grid = old_process_grid(card_wdt, card_hgt)
 
     file = Canvas(output_fn, pagesize=letter)
     try:
         if stripe_color:
             file.setStrokeColor(stripe_color)
-        write_page(file, card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
-                   grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title, stripe_color, stripe_text)
+        old_write_page(file, old_card_back(title, grid), False, card_wdt, card_hgt, cards_wide,
+                       grid_start_left, grid_start_top, margin_x, margin_y, "", 0, 0, title, stripe_color, stripe_text)
     finally:
         file.save()
 
 
 if __name__ == '__main__':
     from reportlab.lib.colors import crimson
-    set_style(35, False)
-    write_back("cards/test_back.pdf", 2.5, 3.5, 10.0, 10.0, "Calling All Heretics", crimson, "Test pack 1")
+    old_set_style(35, False)
+    old_write_back("cards/test_back.pdf", 2.5, 3.5, 10.0, 10.0, "Calling All Heretics", crimson, "Test pack 1")

@@ -1,4 +1,4 @@
-from pdf_gen import set_style, process_blacks, process_whites, write_file, write_back
+from pdf_gen import old_set_style, old_process_blacks, old_process_whites, old_write_file, old_write_back
 from gui import run
 
 import click
@@ -20,11 +20,11 @@ hc_defaults = {"blank": 5,
                "stripe_text": '',
                "output": ''}
 colors = getAllNamedColors()
-config_fn = "cahgen.cfg"
+default_config_fn = "cahgen.cfg"
 loaded_defaults = dict()
 
 
-def load_defaults(loaded):
+def load_defaults(loaded, config_fn=default_config_fn):
     config = ConfigParser()
     config.read(config_fn)
     if "DEFAULTS" in config:
@@ -170,9 +170,9 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
     If the --output option is supplied, the file will be written to that directory, instead of the same as the input
     files."""
 
-    set_style(font_size, True)
+    old_set_style(font_size, True)
     if duplex:
-        set_style(loaded_defaults["back_fs"], False)
+        old_set_style(loaded_defaults["back_fs"], False)
         stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
         stripe_text = loaded_defaults["stripe_text"]
     else:
@@ -180,9 +180,9 @@ def white(width, height, side_margin, top_margin, title, release_title_restrict,
         stripe_text = ''
     for file in lists:
         output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
-        cards = process_whites(file.readlines())
-        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
-                   stripe_color, stripe_text, duplex)
+        cards = old_process_whites(file.readlines())
+        old_write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
+                       stripe_color, stripe_text, duplex)
 
 
 @cli.command(short_help="process black card lists")
@@ -208,9 +208,9 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
     If the --output option is supplied, the file will be written to that directory, instead of the same as the input
     files."""
 
-    set_style(font_size, True)
+    old_set_style(font_size, True)
     if duplex:
-        set_style(loaded_defaults["back_fs"], False)
+        old_set_style(loaded_defaults["back_fs"], False)
         stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
         stripe_text = loaded_defaults["stripe_text"]
     else:
@@ -218,9 +218,9 @@ def black(blank, width, height, side_margin, top_margin, title, release_title_re
         stripe_text = ''
     for file in lists:
         output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
-        cards = process_blacks(file.readlines(), blank)
-        write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
-                   stripe_color, stripe_text, duplex)
+        cards = old_process_blacks(file.readlines(), blank)
+        old_write_file(cards, output_file, width, height, side_margin, top_margin, title, icon, icon_width,
+                       stripe_color, stripe_text, duplex)
 
 
 @cli.command(short_help="print single page of card backs")
@@ -243,10 +243,10 @@ def back(width, height, side_margin, top_margin, title, release_title_restrict, 
     Writes to back.pdf, in the --output directory if supplied or current directory otherwise. Still useful
     with the duplex option of the blacks/whites, as it gives you a preview of the back"""
 
-    set_style(font_size, False)
+    old_set_style(font_size, False)
     if not output:
         output = join('.', "back.pdf")
-    write_back(output, width, height, side_margin, top_margin, title, stripe_color, stripe_text)
+    old_write_back(output, width, height, side_margin, top_margin, title, stripe_color, stripe_text)
 
 
 @cli.command(short_help="Write standard config file for editing")
@@ -258,7 +258,7 @@ def cfg():
     config = ConfigParser()
     config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items() if k != "icon"}
     config["DEFAULTS"]["icon"] = basename(hc_defaults["icon"])
-    with open(config_fn, mode="w") as file:
+    with open(default_config_fn, mode="w") as file:
         config.write(file)
 
 
