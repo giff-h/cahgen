@@ -158,7 +158,7 @@ class _PDFWriter:
     def _contrast(color):
         red, green, blue = color.bitmap_rgb()
         gray = red * 0.299 + green * 0.587 + blue * 0.114
-        return black if gray > 186 else white  # TODO if middle brightness, make self.text_color
+        return black if gray > 186 else white
 
     def _draw_grid(self):
         self.file.setStrokeColor(self.text_color)
@@ -275,8 +275,8 @@ class _PDFWriter:
 
     def write(self):
         self.file = Canvas(self.filename, pagesize=letter)
-        page = next(self._page_generator())
-        self._draw_page(page)
+        for page in next(self._page_generator()):
+            self._draw_page(page)
         self.file.save()
 
 
