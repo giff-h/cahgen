@@ -1,4 +1,4 @@
-from pdf_gen import old_set_style, old_process_blacks, old_process_whites, old_write_file, old_write_back
+from pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
 
 import sys
 from PyQt5.QtWidgets import *
