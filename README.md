@@ -116,6 +116,8 @@ Currently this code is only available by cloning this repository, soon I will de
 
 ## Feedback
 
+Do please check out the beta branch as well, some extra work may have been pushed. Beta should always have been minimally tested by me, but be aware it may break.
+
 If the code broke on you, or if it does something you believe is unintended, or if you'd like to help at all, contact me at:
 * Twitter: [@hamstap85](https://twitter.com/hamstap85) (though I'm not really very active here currently)
 

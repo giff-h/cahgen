@@ -352,5 +352,4 @@ class CardBackWriter(_PDFWriter):
 
 
 if __name__ == '__main__':
-    # FIXME this is writing a second black filled blank page
-    CardBackWriter("back.pdf", 2.5, 3.5, 10, 10, 35, "Calling All Heretics", PackProfile("Test", "azure"), True)
+    pass
