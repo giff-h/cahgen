@@ -267,7 +267,8 @@ class _PDFWriter:
                     page.append(next(card_gen))
                 yield page
         except StopIteration:
-            yield page
+            if page:
+                yield page
 
     def add_pack(self, pack, profile):
         profile = self._process_profile(profile)
@@ -275,7 +276,7 @@ class _PDFWriter:
 
     def write(self):
         self.file = Canvas(self.filename, pagesize=letter)
-        for page in next(self._page_generator()):
+        for page in self._page_generator():
             self._draw_page(page)
         self.file.save()
 
@@ -347,9 +348,9 @@ class CardBackWriter(_PDFWriter):
         self._draw_back(page)
 
     def write(self):
-        self.add_pack((), self.profile)
+        self.add_pack([], self.profile)
         super().write()
 
 
 if __name__ == '__main__':
-    pass
+    CardBackWriter("back.pdf", 2.5, 3.5, 10, 10, 35, "Calling All Heretics", PackProfile("Test", "azure"), True)
