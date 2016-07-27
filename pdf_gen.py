@@ -2,6 +2,7 @@ from img_size import get_image_size
 
 from configparser import ConfigParser
 from copy import deepcopy
+from six import string_types
 
 from reportlab.lib.colors import black, white, getAllNamedColors, HexColor, Color
 from reportlab.lib.pagesizes import letter
@@ -14,7 +15,10 @@ from reportlab.platypus import Paragraph
 class PackProfile:
     colors = getAllNamedColors()
 
-    def __init__(self, name: str, color):
+    def __init__(self, name, color):
+        if not isinstance(name, string_types):
+            raise TypeError("Parameter 'name' ({}) is not a string".format(repr(name)))
+
         self.name = name
         self.color = color
         if isinstance(color, str):
@@ -286,8 +290,10 @@ class WhiteCardWriter(_PDFWriter):
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
                  game_title, icon_fn, icon_width, duplex):
-        super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-                         game_title, icon_fn, icon_width, duplex, black)
+        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
+        #                  game_title, icon_fn, icon_width, duplex, black)
+        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
+                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black)
 
     def _process_pack(self, pack):
         for card in pack:
@@ -301,8 +307,10 @@ class BlackCardWriter(_PDFWriter):
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
                  game_title, icon_fn, icon_width, duplex, blank):
-        super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-                         game_title, icon_fn, icon_width, duplex, white)
+        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
+        #                  game_title, icon_fn, icon_width, duplex, white)
+        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
+                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white)
 
         self.blank = "_" * blank
 
@@ -318,18 +326,22 @@ class BlackCardWriter(_PDFWriter):
 
     def _draw_front(self, page):
         self._fill_page(black)
-        super()._draw_front(page)
+        # super()._draw_front(page)
+        _PDFWriter._draw_front(self, page)
 
     def _draw_back(self, page):
         self._fill_page(black)
-        super()._draw_back(page)
+        # super()._draw_back(page)
+        _PDFWriter._draw_back(self, page)
 
 
 class CardBackWriter(_PDFWriter):
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, font_size,
                  game_title, profile, is_black_card):
-        super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
-                         game_title, '', 0, False, white if is_black_card else black)
+        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
+        #                  game_title, '', 0, False, white if is_black_card else black)
+        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
+                            game_title, '', 0, False, white if is_black_card else black)
 
         self.profile = self._process_profile(profile)
         self.is_black_card = is_black_card
@@ -349,8 +361,9 @@ class CardBackWriter(_PDFWriter):
 
     def write(self):
         self.add_pack([], self.profile)
-        super().write()
+        # super().write()
+        _PDFWriter.write(self)
 
 
 if __name__ == '__main__':
-    CardBackWriter("back.pdf", 2.5, 3.5, 10, 10, 35, "Calling All Heretics", PackProfile("Test", "azure"), True)
+    pass

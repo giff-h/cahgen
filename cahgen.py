@@ -132,7 +132,7 @@ help_is_black = "Print as black cards"
 
 @click.group()
 def cli():
-    """Generate a Cards Against Humanity™ style pdf to be printed and cut into cards.
+    """Generate a Cards Against Humanity(TM) style pdf to be printed and cut into cards.
 
     The white and black commands are the standard card generators, either front face only or alternating
     duplex, given files that are lists of the contents of the cards. The output is written to

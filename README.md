@@ -9,7 +9,7 @@ Running `python3 cahgen.py` yields:
 ```
 Usage: cahgen.py [OPTIONS] COMMAND [ARGS]...
 
-  Generate a Cards Against Humanity™ style pdf to be printed and cut into
+  Generate a Cards Against Humanity(TM) style pdf to be printed and cut into
   cards.
 
   The white and black commands are the standard card generators, either

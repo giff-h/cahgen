@@ -1,2 +1,4 @@
-click>=6.0
-reportlab>=3.3
+click>=2.0
+configparser
+reportlab
+six
