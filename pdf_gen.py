@@ -275,8 +275,8 @@ class _PDFWriter:
 
     def write(self):
         self.file = Canvas(self.filename, pagesize=letter)
-        for page in self._page_generator():
-            self._draw_page(page)
+        page = next(self._page_generator())
+        self._draw_page(page)
         self.file.save()
 
 
