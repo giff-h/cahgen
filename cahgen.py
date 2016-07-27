@@ -1,6 +1,4 @@
 from pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
-from pdf_gen import old_set_style, old_process_blacks, old_process_whites, old_write_file, old_write_back
-from gui import run
 
 import click
 from configparser import ConfigParser
@@ -190,20 +188,6 @@ def white(width, height, side_margin, tb_margin, title, release_title_restrict,
         writer.add_pack(file, replace_ext(file.name, "pp"))
     writer.write()
 
-    # old_set_style(front_fs, True)
-    # if duplex:
-    #     old_set_style(loaded_defaults["back_fs"], False)
-    #     stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
-    #     stripe_text = loaded_defaults["stripe_text"]
-    # else:
-    #     stripe_color = None
-    #     stripe_text = ''
-    # for file in lists:
-    #     output_file = join(output if output else dirname(file.name), replace_ext(file.name, "pdf"))
-    #     cards = old_process_whites(file.readlines())
-    #     old_write_file(cards, output_file, width, height, side_margin, tb_margin, title, icon, icon_width,
-    #                    stripe_color, stripe_text, duplex)
-
 
 @cli.command(short_help="process black card lists")
 @click.option("--blank", default=loaded_defaults["blank"], callback=validate_blank, help=help_blank)
@@ -238,20 +222,6 @@ def black(blank, width, height, side_margin, tb_margin, title, release_title_res
         writer.add_pack(file, replace_ext(file.name, "pp"))
     writer.write()
 
-    # old_set_style(front_fs, True)
-    # if duplex:
-    #     old_set_style(loaded_defaults["back_fs"], False)
-    #     stripe_color = validate_stripe_color(None, None, loaded_defaults["stripe_color"])
-    #     stripe_text = loaded_defaults["stripe_text"]
-    # else:
-    #     stripe_color = None
-    #     stripe_text = ''
-    # for file in lists:
-    #     output_file = join(output if output else dirname(file.name), splitext(basename(file.name))[0] + ".pdf")
-    #     cards = old_process_blacks(file.readlines(), blank)
-    #     old_write_file(cards, output_file, width, height, side_margin, tb_margin, title, icon, icon_width,
-    #                    stripe_color, stripe_text, duplex)
-
 
 @cli.command(short_help="print single page of card backs")
 @click.option("--width", default=loaded_defaults["width"], callback=validate_positive, help=help_width)
@@ -277,9 +247,6 @@ def back(width, height, side_margin, tb_margin, title, release_title_restrict, f
     profile = PackProfile(stripe_text, stripe_color) if stripe_color else None
     output = join(output if output else '.', "back.pdf")
     CardBackWriter(output, width, height, side_margin, tb_margin, font_size, title, profile, is_black)
-
-    # old_set_style(font_size, False)
-    # old_write_back(output, width, height, side_margin, tb_margin, title, stripe_color, stripe_text)
 
 
 @cli.command(short_help="Write standard config file for editing")
