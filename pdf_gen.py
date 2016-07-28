@@ -22,7 +22,9 @@ class PackProfile:
         self.name = name
         self.color = color
         if isinstance(color, str):
-            if color.startswith('#'):
+            if color == '':
+                self.color = None
+            elif color.startswith('#'):
                 try:
                     self.color = HexColor(color)
                 except ValueError:
@@ -185,6 +187,8 @@ class _PDFWriter:
         for row_i in range(0, len(page), self.cards_wide):
             row = page[row_i:row_i + self.cards_wide]
             for i in range(len(row)):
+                content = row[i][0]
+
                 start_x = self.page_margin_x + self.card_width * i
                 start_y = self.page_height - (self.page_margin_y + self.card_height * (row_i // self.cards_wide))
 
@@ -202,7 +206,7 @@ class _PDFWriter:
                                      end_y + self.icon_height // 2 - self.title_front_fs // 2,
                                      self.game_title)
 
-                card_p = Paragraph(row[i][0], self.front_style)
+                card_p = Paragraph(content, self.front_style)
                 size = card_p.wrap(abs(end_x - start_x), abs(end_y - start_y))
                 card_p.drawOn(self.file, start_x, start_y - size[1])
 
@@ -214,6 +218,8 @@ class _PDFWriter:
         for row_i in range(0, len(page), self.cards_wide):
             row = page[row_i:row_i + self.cards_wide]
             for i in range(len(row)):
+                profile = row[i][1]
+
                 start_x = self.page_width - (self.page_margin_x + self.card_width * (i+1))
                 start_y = self.page_height - (self.page_margin_y + self.card_height * (row_i // self.cards_wide))
 
@@ -226,8 +232,9 @@ class _PDFWriter:
                 end_x -= self.card_margin_x
                 end_y += self.card_margin_y
 
-                profile = row[i][1]
-                if profile:
+                self.back_paragraph.drawOn(self.file, start_x, start_y - self.bp_size)
+
+                if profile and profile.color:
                     self.file.setFillColor(profile.color)
                     self.file.rect(start_x - self.card_margin_x, end_y - self.card_margin_y,
                                    self.card_width, self.card_margin_y,
@@ -235,8 +242,6 @@ class _PDFWriter:
                     self.file.setFillColor(self._contrast(profile.color))
                     if profile.name:
                         self.file.drawString(start_x, end_y - round(self.card_margin_y * 0.8), profile.name)
-
-                self.back_paragraph.drawOn(self.file, start_x, start_y - self.bp_size)
 
         self.file.showPage()
 
@@ -299,7 +304,7 @@ class WhiteCardWriter(_PDFWriter):
         for card in pack:
             card = self._process_card(card)
             if card and self._card_not_special(card):
-                yield "<b>{}</b>".format(card)
+                yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
 
 
 class BlackCardWriter(_PDFWriter):
@@ -322,7 +327,7 @@ class BlackCardWriter(_PDFWriter):
                     processed = self.blank if card.startswith("_") else ""
                     processed += self.blank.join([x for x in card.split("_") if x])
                     card = processed + self.blank if card.endswith("_") else processed
-                yield "<b>{}</b>".format(card)
+                yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
 
     def _draw_front(self, page):
         self._fill_page(black)
