@@ -2,7 +2,6 @@ from img_size import get_image_size
 
 from configparser import ConfigParser
 from copy import deepcopy
-from six import string_types
 
 from reportlab.lib.colors import black, white, getAllNamedColors, HexColor, Color
 from reportlab.lib.pagesizes import letter
@@ -16,9 +15,6 @@ class PackProfile:
     colors = getAllNamedColors()
 
     def __init__(self, name, color):
-        if not isinstance(name, string_types):
-            raise TypeError("Parameter 'name' ({}) is not a string".format(repr(name)))
-
         self.name = name
         self.color = color
         if isinstance(color, str):
@@ -63,11 +59,19 @@ class PackProfile:
 
 
 class _PDFWriter:
+    GRID_DRAW_ON_PAGES = 1
+    GRID_DRAW_SEPARATE = 2
+
+    MULTI_PACKS_SORT = 1
+    MULTI_PACKS_COLLATE = 2
+    MULTI_PACKS_SMART_STACK = 3
+
     page_width, page_height = letter
     title_front_fs = 7
+    default_font = "Helvetica-Bold"
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-                 game_title, icon_fn, icon_width, duplex, text_color):
+                 game_title, icon_fn, icon_width, duplex, text_color, font):
         self.filename = filename
         self.card_width = card_width
         self.card_height = card_height
@@ -78,6 +82,7 @@ class _PDFWriter:
         self.icon_width = icon_width
         self.duplex = duplex
         self.text_color = text_color
+        self.font = font
 
         self.front_style = deepcopy(getSampleStyleSheet()["Normal"])
         self.front_style.fontSize = front_fs
@@ -166,6 +171,21 @@ class _PDFWriter:
         gray = red * 0.299 + green * 0.587 + blue * 0.114
         return black if gray > 186 else white
 
+    def _card_draw(self, row, column):
+        start_x = self.page_margin_x + self.card_width * column
+        start_y = self.page_height - (self.page_margin_y + self.card_height * row)
+
+        end_x = start_x + self.card_width
+        end_y = start_y - self.card_height
+
+        start_x += self.card_margin_x
+        start_y -= self.card_margin_y
+
+        end_x -= self.card_margin_x
+        end_y += self.card_margin_y
+
+        return start_x, start_y, end_x, end_y
+
     def _draw_grid(self):
         self.file.setStrokeColor(self.text_color)
         for x in range(self.cards_wide + 1):
@@ -182,24 +202,13 @@ class _PDFWriter:
     def _draw_front(self, page):
         self.file.setFillColor(self.text_color)
         self._draw_grid()
-        self.file.setFont("Helvetica-Bold", self.title_front_fs)
+        self.file.setFont(self.font, self.title_front_fs)
 
         for row_i in range(0, len(page), self.cards_wide):
             row = page[row_i:row_i + self.cards_wide]
             for i in range(len(row)):
                 content = row[i][0]
-
-                start_x = self.page_margin_x + self.card_width * i
-                start_y = self.page_height - (self.page_margin_y + self.card_height * (row_i // self.cards_wide))
-
-                end_x = start_x + self.card_width
-                end_y = start_y - self.card_height
-
-                start_x += self.card_margin_x
-                start_y -= self.card_margin_y
-
-                end_x -= self.card_margin_x
-                end_y += self.card_margin_y
+                start_x, start_y, end_x, end_y = self._card_draw(row_i // self.cards_wide, i)
 
                 self.file.drawImage(self.icon_fn, start_x, end_y, self.icon_width, self.icon_height)
                 self.file.drawString(start_x + self.icon_width + 5,
@@ -213,24 +222,13 @@ class _PDFWriter:
         self.file.showPage()
 
     def _draw_back(self, page):
-        self.file.setFont("Helvetica-Bold", int(self.card_margin_y) - 1)
+        self.file.setFont(self.font, int(self.card_margin_y) - 1)
 
         for row_i in range(0, len(page), self.cards_wide):
             row = page[row_i:row_i + self.cards_wide]
             for i in range(len(row)):
                 profile = row[i][1]
-
-                start_x = self.page_width - (self.page_margin_x + self.card_width * (i+1))
-                start_y = self.page_height - (self.page_margin_y + self.card_height * (row_i // self.cards_wide))
-
-                end_x = start_x + self.card_width
-                end_y = start_y - self.card_height
-
-                start_x += self.card_margin_x
-                start_y -= self.card_margin_y
-
-                end_x -= self.card_margin_x
-                end_y += self.card_margin_y
+                start_x, start_y, end_x, end_y = self._card_draw(row_i // self.cards_wide, self.cards_wide - (i+1))
 
                 self.back_paragraph.drawOn(self.file, start_x, start_y - self.bp_size)
 
@@ -294,11 +292,11 @@ class WhiteCardWriter(_PDFWriter):
     style = deepcopy(getSampleStyleSheet()["Normal"])
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-                 game_title, icon_fn, icon_width, duplex):
+                 game_title, icon_fn, icon_width, duplex, font=_PDFWriter.default_font):
         # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
         #                  game_title, icon_fn, icon_width, duplex, black)
         _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
-                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black)
+                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black, font)
 
     def _process_pack(self, pack):
         for card in pack:
@@ -311,11 +309,11 @@ class BlackCardWriter(_PDFWriter):
     style = deepcopy(getSampleStyleSheet()["Normal"])
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-                 game_title, icon_fn, icon_width, duplex, blank):
+                 game_title, icon_fn, icon_width, duplex, blank, font=_PDFWriter.default_font):
         # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
         #                  game_title, icon_fn, icon_width, duplex, white)
         _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
-                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white)
+                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white, font)
 
         self.blank = "_" * blank
 
@@ -342,11 +340,11 @@ class BlackCardWriter(_PDFWriter):
 
 class CardBackWriter(_PDFWriter):
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, font_size,
-                 game_title, profile, is_black_card):
+                 game_title, profile, is_black_card, font=_PDFWriter.default_font):
         # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
         #                  game_title, '', 0, False, white if is_black_card else black)
         _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
-                            game_title, '', 0, False, white if is_black_card else black)
+                            game_title, '', 0, False, white if is_black_card else black, font)
 
         self.profile = self._process_profile(profile)
         self.is_black_card = is_black_card
