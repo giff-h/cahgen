@@ -1,4 +1,4 @@
-from img_size import get_image_size
+from lib.img_size import get_image_size
 
 from configparser import ConfigParser
 from copy import deepcopy

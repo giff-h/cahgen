@@ -1,8 +1,9 @@
-from pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
+from lib.pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
 
-import click
 from configparser import ConfigParser
 from os.path import basename, dirname, exists, isdir, join, realpath, splitext
+
+import click
 from reportlab.lib.colors import getAllNamedColors, HexColor
 
 hc_defaults = {"blank": 5,
@@ -13,11 +14,11 @@ hc_defaults = {"blank": 5,
                "title": "Calling All Heretics",
                "front_fs": 14,
                "back_fs": 35,
-               "icon": join(dirname(realpath(__file__)), "cards.png"),
+               "icon": join(dirname(realpath(__file__)), "resources/images/cards.png"),
                "icon_width": 30,
                "stripe_color": '',
                "stripe_text": '',
-               "output": '.'}
+               "output": 'resources/cards/output'}
 colors = getAllNamedColors()
 default_config_fn = "cahgen.cfg"
 loaded_defaults = dict()
@@ -179,7 +180,7 @@ def white(width, height, side_margin, tb_margin, title, release_title_restrict,
     Writes to white.pdf, in the --output directory if supplied or current directory otherwise, and will replace
     any preexisting file."""
 
-    output = join(output if output else '.', "white.pdf")
+    output = join(output if output else '.', "white.pdf")  # FIXME verify default output
     writer = WhiteCardWriter(output, width, height, side_margin, tb_margin, front_fs, back_fs,
                              title, icon, icon_width, duplex)
     for file in lists:
@@ -213,7 +214,7 @@ def black(blank, width, height, side_margin, tb_margin, title, release_title_res
     Writes to black.pdf, in the --output directory if supplied or current directory otherwise, and will replace
     any preexisting file."""
 
-    output = join(output if output else '.', "black.pdf")
+    output = join(output if output else '.', "black.pdf")  # FIXME verify default output
     writer = BlackCardWriter(output, width, height, side_margin, tb_margin, front_fs, back_fs,
                              title, icon, icon_width, duplex, blank)
     for file in lists:
@@ -245,7 +246,7 @@ def back(width, height, side_margin, tb_margin, title, release_title_restrict, f
     with the duplex option of the blacks/whites, as it gives you a preview of the back"""
 
     profile = PackProfile(stripe_text, stripe_color) if stripe_color else None
-    output = join(output if output else '.', "back.pdf")
+    output = join(output if output else '.', "back.pdf")  # FIXME verify default output
     CardBackWriter(output, width, height, side_margin, tb_margin, font_size, title, profile, is_black)
 
 
@@ -299,15 +300,6 @@ def listcolors(contains):
             for color in row:
                 click.secho(color, color=color.strip(), nl=False)
             click.echo()
-
-
-@cli.command(short_help="Run the windowed program")
-def gui():
-    """Start the gui of the program for more advanced handling of files.
-
-    UNDER CONSTRUCTION: CURRENTLY DOES NOTHING. NOTHING AT ALL. TURN AROUND.
-    GO SOMEWHERE ELSE."""
-    # run()
 
 
 if __name__ == "__main__":
