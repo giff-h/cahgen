@@ -1,5 +1,3 @@
-from lib.img_size import get_image_size
-
 from configparser import ConfigParser
 from copy import deepcopy
 
@@ -9,6 +7,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph
+
+from .img_size import get_image_size
 
 
 class PackProfile:
@@ -257,7 +257,15 @@ class _PDFWriter:
                        self.page_width - 2 * self.page_margin_x, self.page_height - 2 * self.page_margin_y,
                        stroke=0, fill=1)
 
-    def _process_pack(self, pack): raise NotImplementedError
+    def _process_pack(self, pack):
+        for card in pack:
+            card = self._process_card(card)
+            if card and self._card_not_special(card):
+                card = self._process_pack_card(card)
+                yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
+
+    def _process_pack_card(self, card):
+        return card
 
     def _card_generator(self):
         for pack, profile in self.packs:
@@ -293,16 +301,16 @@ class WhiteCardWriter(_PDFWriter):
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
                  game_title, icon_fn, icon_width, duplex, font=_PDFWriter.default_font):
-        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-        #                  game_title, icon_fn, icon_width, duplex, black)
-        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
-                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black, font)
+        super(WhiteCardWriter, self).__init__(filename, card_width, card_height, card_side_margin, card_tb_margin,
+                                              front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black, font)
+        # _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
+        #                     front_fs, back_fs, game_title, icon_fn, icon_width, duplex, black, font)
 
-    def _process_pack(self, pack):
-        for card in pack:
-            card = self._process_card(card)
-            if card and self._card_not_special(card):
-                yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
+    # def _process_pack(self, pack):
+    #     for card in pack:
+    #         card = self._process_card(card)
+    #         if card and self._card_not_special(card):
+    #             yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
 
 
 class BlackCardWriter(_PDFWriter):
@@ -310,41 +318,48 @@ class BlackCardWriter(_PDFWriter):
 
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
                  game_title, icon_fn, icon_width, duplex, blank, font=_PDFWriter.default_font):
-        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, front_fs, back_fs,
-        #                  game_title, icon_fn, icon_width, duplex, white)
-        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
-                            front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white, font)
+        super(BlackCardWriter, self).__init__(filename, card_width, card_height, card_side_margin, card_tb_margin,
+                                              front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white, font)
+        # _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin,
+        #                     front_fs, back_fs, game_title, icon_fn, icon_width, duplex, white, font)
 
         self.blank = "_" * blank
 
-    def _process_pack(self, pack):
-        for card in pack:
-            card = self._process_card(card)
-            if card and self._card_not_special(card):
-                if self.blank:
-                    processed = self.blank if card.startswith("_") else ""
-                    processed += self.blank.join([x for x in card.split("_") if x])
-                    card = processed + self.blank if card.endswith("_") else processed
-                yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
+    # def _process_pack(self, pack):
+    #     for card in pack:
+    #         card = self._process_card(card)
+    #         if card and self._card_not_special(card):
+    #             if self.blank:
+    #                 processed = self.blank if card.startswith("_") else ""
+    #                 processed += self.blank.join([x for x in card.split("_") if x])
+    #                 card = processed + self.blank if card.endswith("_") else processed
+    #             yield card if card.startswith("<b>") else "<b>{}</b>".format(card)
+
+    def _process_pack_card(self, card):
+        if self.blank:
+            processed = self.blank if card.startswith("_") else ""
+            processed += self.blank.join([x for x in card.split("_") if x])
+            return processed + self.blank if card.endswith("_") else processed
 
     def _draw_front(self, page):
         self._fill_page(black)
-        # super()._draw_front(page)
-        _PDFWriter._draw_front(self, page)
+        super(BlackCardWriter, self)._draw_front(page)
+        # _PDFWriter._draw_front(self, page)
 
     def _draw_back(self, page):
         self._fill_page(black)
-        # super()._draw_back(page)
-        _PDFWriter._draw_back(self, page)
+        super(BlackCardWriter, self)._draw_back(page)
+        # _PDFWriter._draw_back(self, page)
 
 
 class CardBackWriter(_PDFWriter):
     def __init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, font_size,
                  game_title, profile, is_black_card, font=_PDFWriter.default_font):
-        # super().__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
-        #                  game_title, '', 0, False, white if is_black_card else black)
-        _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
-                            game_title, '', 0, False, white if is_black_card else black, font)
+        super(CardBackWriter, self).__init__(filename, card_width, card_height, card_side_margin, card_tb_margin, 0,
+                                             font_size, game_title, '', 0, False, white if is_black_card else black,
+                                             font)
+        # _PDFWriter.__init__(self, filename, card_width, card_height, card_side_margin, card_tb_margin, 0, font_size,
+        #                     game_title, '', 0, False, white if is_black_card else black, font)
 
         self.profile = self._process_profile(profile)
         self.is_black_card = is_black_card
@@ -364,8 +379,8 @@ class CardBackWriter(_PDFWriter):
 
     def write(self):
         self.add_pack([], self.profile)
-        # super().write()
-        _PDFWriter.write(self)
+        super(CardBackWriter, self).write()
+        # _PDFWriter.write(self)
 
 
 if __name__ == '__main__':

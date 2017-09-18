@@ -1,24 +1,26 @@
-from lib.pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
-
 from configparser import ConfigParser
-from os.path import basename, dirname, exists, isdir, join, realpath, splitext
+from os import path
 
 import click
 from reportlab.lib.colors import getAllNamedColors, HexColor
 
-hc_defaults = {"blank": 5,
-               "width": 2.5,
-               "height": 3.5,
-               "side_margin": 10,
-               "tb_margin": 10,
-               "title": "Calling All Heretics",
-               "front_fs": 14,
-               "back_fs": 35,
-               "icon": join(dirname(realpath(__file__)), "resources/images/cards.png"),
-               "icon_width": 30,
-               "stripe_color": '',
-               "stripe_text": '',
-               "output": 'resources/cards/output'}
+from lib.pdf_gen import PackProfile, WhiteCardWriter, BlackCardWriter, CardBackWriter
+
+
+THIS_DIR = path.dirname(path.realpath(__file__))
+hardcoded_defaults = {"blank": 5,
+                      "width": 2.5,
+                      "height": 3.5,
+                      "side_margin": 10,
+                      "tb_margin": 10,
+                      "title": "Calling All Heretics",
+                      "front_fs": 14,
+                      "back_fs": 35,
+                      "icon": path.join(THIS_DIR, "resources/images/cards.png"),
+                      "icon_width": 30,
+                      "stripe_color": '',
+                      "stripe_text": '',
+                      "output": path.join(THIS_DIR, 'resources/cards/output')}
 colors = getAllNamedColors()
 default_config_fn = "cahgen.cfg"
 loaded_defaults = dict()
@@ -29,16 +31,16 @@ def load_defaults(loaded, config_fn=default_config_fn):
     config.read(config_fn)
     if "DEFAULTS" in config:
         defaults = config["DEFAULTS"]
-        for param in hc_defaults.keys():
-            param_type = type(hc_defaults[param])
-            loaded[param] = param_type(defaults.get(param, hc_defaults[param]))
+        for param in hardcoded_defaults.keys():
+            param_type = type(hardcoded_defaults[param])
+            loaded[param] = param_type(defaults.get(param, hardcoded_defaults[param]))
     else:
-        for k, v in hc_defaults.items():
+        for k, v in hardcoded_defaults.items():
             loaded[k] = v
 
 
 def replace_ext(filename, ext):
-    return splitext(filename)[0] + '.' + ext
+    return path.splitext(filename)[0] + '.' + ext
 
 
 def validate_stripe_color(ctx, param, value):
@@ -61,8 +63,8 @@ def validate_stripe_color(ctx, param, value):
 def validate_output(ctx, param, value):
     if value == '':
         return value
-    if exists(value):
-        if isdir(value):
+    if path.exists(value):
+        if path.isdir(value):
             return value
         else:
             raise click.BadParameter(repr(value) + " already exists and is not a directory")
@@ -101,14 +103,14 @@ load_defaults(loaded_defaults)
 
 help_blank = "Number of underscores to normalize the size of the blank spaces to in the black cards. \
 Meant to prevent you from pulling your hair out making sure all the blank marks are the same. Defaults to {}. \
-If set to 0, no normalizing will be done.".format(hc_defaults["blank"])
-help_width = "Width of each card in inches. Defaults to {}".format(hc_defaults["width"])
-help_height = "Height of each card in inches. Defaults to {}".format(hc_defaults["height"])
-help_sm = "Left and right card print margin in pixels. Defaults to {}".format(hc_defaults["side_margin"])
-help_tbm = "Top and bottom card print margin in pixels. Defaults to {}".format(hc_defaults["tb_margin"])
+If set to 0, no normalizing will be done.".format(hardcoded_defaults["blank"])
+help_width = "Width of each card in inches. Defaults to {}".format(hardcoded_defaults["width"])
+help_height = "Height of each card in inches. Defaults to {}".format(hardcoded_defaults["height"])
+help_sm = "Left and right card print margin in pixels. Defaults to {}".format(hardcoded_defaults["side_margin"])
+help_tbm = "Top and bottom card print margin in pixels. Defaults to {}".format(hardcoded_defaults["tb_margin"])
 help_title = "The game title to be printed on the back and the bottom of the front of all the cards. \
 Make sure it's an acronym of CAH. Note that the original game phrase is trademarked. \
-Defaults to {}".format(hc_defaults["title"])
+Defaults to {}".format(hardcoded_defaults["title"])
 help_release_title_restrict = "If enabled, will not restrict the title to an acronym of CAH. \
 The title will be exactly as given. WARNING it currently does not work. If anyone knows the python click library, \
 can you help me out?"
@@ -117,7 +119,7 @@ Does not automatically check whether a huge message will print correctly on the 
 Defaults to {}"
 help_icon = "Image file to be used as the icon on the front of the card."
 help_icon_width = "Pixel width to print the icon on the front of the card. \
-Height is scaled to match original ratio if possible. Defaults to {}".format(hc_defaults["icon_width"])
+Height is scaled to match original ratio if possible. Defaults to {}".format(hardcoded_defaults["icon_width"])
 help_stripe_color = "The stripe at the bottom of the card, meant to distinguish various packs. \
 Either a standard color, or a hex RGB(a) value if started with '#'. \
 Example: `--stripe-color crimson` or `--stripe-color #DC143C` or `--stripe-color #DC143CFF` are all the same. \
@@ -165,13 +167,13 @@ def cli():
 @click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
 @click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
 @click.option("--front_fs", default=loaded_defaults["front_fs"], callback=validate_positive,
-              help=help_font_size.format("front", hc_defaults["front_fs"]))
+              help=help_font_size.format("front", hardcoded_defaults["front_fs"]))
 @click.option("--back_fs", default=loaded_defaults["back_fs"], callback=validate_positive,
-              help=help_font_size.format("back", hc_defaults["back_fs"]))
+              help=help_font_size.format("back", hardcoded_defaults["back_fs"]))
 @click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
-              help=help_output.format(join(hc_defaults["output"], "white.pdf")))
+              help=help_output.format(path.join(hardcoded_defaults["output"], "white.pdf")))
 @click.option("--duplex", is_flag=True, help=help_duplex)
 @click.argument("lists", nargs=-1, type=click.File())
 def white(width, height, side_margin, tb_margin, title, release_title_restrict,
@@ -180,11 +182,11 @@ def white(width, height, side_margin, tb_margin, title, release_title_restrict,
     Writes to white.pdf, in the --output directory if supplied or current directory otherwise, and will replace
     any preexisting file."""
 
-    output = join(output if output else '.', "white.pdf")  # FIXME verify default output
+    output = path.join(output if output else '.', "white.pdf")  # FIXME verify default output
     writer = WhiteCardWriter(output, width, height, side_margin, tb_margin, front_fs, back_fs,
                              title, icon, icon_width, duplex)
     for file in lists:
-        if splitext(file.name)[1] == ".pp":
+        if path.splitext(file.name)[1] == ".pp":
             continue
         writer.add_pack(file, replace_ext(file.name, "pp"))
     writer.write()
@@ -199,13 +201,13 @@ def white(width, height, side_margin, tb_margin, title, release_title_restrict,
 @click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
 @click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
 @click.option("--front_fs", default=loaded_defaults["front_fs"], callback=validate_positive,
-              help=help_font_size.format("front", hc_defaults["front_fs"]))
+              help=help_font_size.format("front", hardcoded_defaults["front_fs"]))
 @click.option("--back_fs", default=loaded_defaults["back_fs"], callback=validate_positive,
-              help=help_font_size.format("back", hc_defaults["back_fs"]))
+              help=help_font_size.format("back", hardcoded_defaults["back_fs"]))
 @click.option("--icon", type=click.Path(exists=True), default=loaded_defaults["icon"], help=help_icon)
 @click.option("--icon-width", default=loaded_defaults["icon_width"], callback=validate_positive, help=help_icon_width)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"], callback=validate_output,
-              help=help_output.format(join(hc_defaults["output"], "black.pdf")))
+              help=help_output.format(path.join(hardcoded_defaults["output"], "black.pdf")))
 @click.option("--duplex", is_flag=True, help=help_duplex)
 @click.argument("lists", nargs=-1, type=click.File())
 def black(blank, width, height, side_margin, tb_margin, title, release_title_restrict,
@@ -214,11 +216,11 @@ def black(blank, width, height, side_margin, tb_margin, title, release_title_res
     Writes to black.pdf, in the --output directory if supplied or current directory otherwise, and will replace
     any preexisting file."""
 
-    output = join(output if output else '.', "black.pdf")  # FIXME verify default output
+    output = path.join(output if output else '.', "black.pdf")  # FIXME verify default output
     writer = BlackCardWriter(output, width, height, side_margin, tb_margin, front_fs, back_fs,
                              title, icon, icon_width, duplex, blank)
     for file in lists:
-        if splitext(file.name)[1] == ".pp":
+        if path.splitext(file.name)[1] == ".pp":
             continue
         writer.add_pack(file, replace_ext(file.name, "pp"))
     writer.write()
@@ -232,12 +234,12 @@ def black(blank, width, height, side_margin, tb_margin, title, release_title_res
 @click.option("--title", type=TITLE_TYPE, default=loaded_defaults["title"], help=help_title)
 @click.option("--release-title-restrict", is_flag=True, help=help_release_title_restrict)
 @click.option("--font-size", default=loaded_defaults["back_fs"], callback=validate_positive,
-              help=help_font_size.format("back", hc_defaults["back_fs"]))
+              help=help_font_size.format("back", hardcoded_defaults["back_fs"]))
 @click.option("--stripe-color", default=loaded_defaults["stripe_color"], callback=validate_stripe_color,
               help=help_stripe_color)
 @click.option("--stripe-text", default=loaded_defaults["stripe_text"], help=help_stripe_text)
 @click.option("--output", type=click.Path(), default=loaded_defaults["output"],
-              help=help_output.format(join(hc_defaults["output"], "back.pdf")))
+              help=help_output.format(path.join(hardcoded_defaults["output"], "back.pdf")))
 @click.option("--is-black", is_flag=True)
 def back(width, height, side_margin, tb_margin, title, release_title_restrict, font_size,
          stripe_color, stripe_text, output, is_black):
@@ -246,7 +248,7 @@ def back(width, height, side_margin, tb_margin, title, release_title_restrict, f
     with the duplex option of the blacks/whites, as it gives you a preview of the back"""
 
     profile = PackProfile(stripe_text, stripe_color) if stripe_color else None
-    output = join(output if output else '.', "back.pdf")  # FIXME verify default output
+    output = path.join(output if output else '.', "back.pdf")  # FIXME verify default output
     CardBackWriter(output, width, height, side_margin, tb_margin, font_size, title, profile, is_black)
 
 
@@ -267,8 +269,8 @@ def cfg(defaults, profile):
 
     if defaults:
         config = ConfigParser()
-        config["DEFAULTS"] = {k: str(v) for k, v in hc_defaults.items() if k != "icon"}
-        config["DEFAULTS"]["icon"] = basename(hc_defaults["icon"])
+        config["DEFAULTS"] = {k: str(v) for k, v in hardcoded_defaults.items() if k != "icon"}
+        config["DEFAULTS"]["icon"] = path.basename(hardcoded_defaults["icon"])
         with open(default_config_fn, mode="w") as file:
             config.write(file)
 

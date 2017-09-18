@@ -1,4 +1,5 @@
-click>=2.0
-configparser
-reportlab
-six
+click==6.7
+hypothesis==3.14.0
+olefile==0.44
+Pillow==4.2.1
+reportlab==3.4.0
